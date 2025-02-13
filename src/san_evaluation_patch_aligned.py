@@ -2,10 +2,11 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches  # ✅ 显式导入，避免 `patches` 变量冲突
+import matplotlib.patches as mpatches  
 from PIL import Image
 from torchvision import transforms
 import open_clip
+import torch.nn.functional as F
 
 # set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -26,10 +27,10 @@ model.eval()
 
 # load the image
 # image_path = "D:\\Github\\SAN-evaluation\\data\\images\\001.Black_footed_Albatross\\Black_Footed_Albatross_0001_796111.jpg"
-image_path = "D:\\Github\\SAN-evaluation\\data\\images\\004.Groove_billed_Ani\\Groove_Billed_Ani_0002_1670.jpg"
+# image_path = "D:\\Github\\SAN-evaluation\\data\\images\\004.Groove_billed_Ani\\Groove_Billed_Ani_0002_1670.jpg"
 # image_path = "D:\\Github\\SAN-evaluation\\data\\images\\200.Common_Yellowthroat\\Common_Yellowthroat_0003_190521.jpg"
 # image_path = "D:\\Github\\SAN-evaluation\\data\\images\\193.Bewick_Wren\\Bewick_Wren_0010_185142.jpg"
-# image_path = "D:\\Github\\SAN-evaluation\\data\\images\\195.Carolina_Wren\\Carolina_Wren_0011_186871.jpg"
+image_path = "D:\\Github\\SAN-evaluation\\data\\images\\195.Carolina_Wren\\Carolina_Wren_0011_186871.jpg"
 # image_path = "D:\\Github\\SAN-evaluation\\data\\images\\185.Bohemian_Waxwing\\Bohemian_Waxwing_0001_796680.jpg"
 # image_path = "D:\\Github\\SAN-evaluation\\data\\images\\185.Bohemian_Waxwing\\Bohemian_Waxwing_0002_177986.jpg"
 image = Image.open(image_path).convert("RGB")
@@ -65,7 +66,7 @@ def extract_patches(image, patch_size):
     
     return patches.squeeze(0), num_patches_x, num_patches_y, image_tensor
 
-# xtract patches
+# extract patches
 patches, num_patches_x, num_patches_y, inputs = extract_patches(image, patch_size)
 
 # denormalize the image
@@ -110,6 +111,7 @@ def classify_patches(patch_features):
         similarity = patch_features @ text_features.T
         predicted_labels = similarity.argmax(dim=-1)
         return [text_descriptions[i.item()] for i in predicted_labels]
+
 
 # classify patches
 labels = classify_patches(patch_features)
