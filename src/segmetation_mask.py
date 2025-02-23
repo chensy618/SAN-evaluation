@@ -14,6 +14,9 @@ from detectron2.data import MetadataCatalog
 # Configuration
 CHECKPOINT_PATH = "model/san_vit_b_16.pth"  # Pre-trained SAN model
 IMAGE_PATH = "D:\\Github\\SAN-evaluation\\data\\images\\195.Carolina_Wren\\Carolina_Wren_0011_186871.jpg"
+# IMAGE_PATH = "D:\\Github\\SAN-evaluation\\data\\images\\001.Black_footed_Albatross\Black_Footed_Albatross_0032_796115.jpg"
+# IMAGE_PATH = "D:\\Github\\SAN-evaluation\\data\\images\\001.Black_footed_Albatross\\Black_Footed_Albatross_0001_796111.jpg"
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Define class labels
@@ -91,11 +94,14 @@ def get_segmentation_mask(model, image_tensor):
         
         # Forward pass through SAN model
         outputs = model(batched_inputs)
-
+        # print all the outputs with seqential number
+        for i, output in enumerate(outputs):
+            print("output ", i, output)
+            print("output keys", output.keys())
         
         # Extract segmentation mask
         seg_mask = outputs[0]["sem_seg"].argmax(dim=0)
-        print(seg_mask.shape)
+        print("seg_mask shape", seg_mask.shape)
         print(seg_mask)
 
     return seg_mask.cpu().numpy()

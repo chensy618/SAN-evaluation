@@ -55,6 +55,7 @@ text_features = projection_layer(text_features)
 print(f"text_features.shape after projection: {text_features.shape}")  # [15, 768]
 
 # modify the visual forward pass to get all patch features
+# During the forward propagation of the model, when the image is processed, the output of the Transformer layer is obtained, and then all patch tokens are extracted.
 def modified_visual_forward(self, x):
     x = self.conv1(x)  # [batch, width, grid, grid]
     x = x.reshape(x.shape[0], x.shape[1], -1)  # [batch, width, grid^2]
