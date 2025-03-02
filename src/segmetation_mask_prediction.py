@@ -12,6 +12,7 @@ import cv2
 from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.utils.colormap import random_color
 from san.model.clip_utils.utils import get_labelset_from_dataset
+import math
 
 # ------------------------------------------------------------------
 # Configuration
@@ -71,6 +72,9 @@ def get_segmentation_mask(model, image_tensor):
                            "meta": {"dataset_name": dataset_name}}]
         outputs = model(batched_inputs)
         # outputs[0]["sem_seg"] is [num_classes, H, W]
+        # skip the background class (final index)
+        outputs[0]["sem_seg"] = outputs[0]["sem_seg"][:-1]
+        # outputs[0]["sem_seg"] = outputs[0]["sem_seg"].sigmoid()
         seg_mask = outputs[0]["sem_seg"].argmax(dim=0)
         print("Segmentation mask:", seg_mask)
         
@@ -199,6 +203,113 @@ def visualize_results(image_path, seg_map, orig_size, label_positions):
     plt.tight_layout()
     plt.show()
 
+def visualize_labels_in_subplots_with_center_text(
+    image_path, 
+    seg_map, 
+    orig_size, 
+    labelset,
+    n_cols=3
+):
+    """
+    Visualize each label in seg_map in a separate subplot and annotate the label text at the center of its corresponding region.
+    
+    Parameters:
+    ----------
+    image_path : str
+        Path to the original image.
+    
+    seg_map : np.ndarray
+        Segmentation result with shape (H_seg, W_seg), where each pixel is a class ID (int).
+    
+    orig_size : (height, width)
+        Height and width of the original image, used to resize seg_map back to the original size for alignment.
+    
+    labelset : list of str
+        Mapping from label ID to label name, e.g., ["back", "beak", "belly", ...].
+    
+    n_cols : int
+        Number of columns in the subplot grid, default is 3; can be adjusted as needed.
+    """
+    # 1. Read the original image
+    orig_image = Image.open(image_path).convert("RGB")
+    new_size = (orig_size[1], orig_size[0])  # (width, height)
+
+    # 2. Resize seg_map back to the original image size
+    seg_map_resized = Image.fromarray(seg_map.astype(np.uint8)).resize(
+        new_size, 
+        resample=Image.NEAREST
+    )
+    seg_map_resized = np.array(seg_map_resized)
+
+    # 3. Find the unique label IDs present in the resized seg_map
+    unique_labels = np.unique(seg_map_resized)
+
+    # 4. Create a subplot grid with appropriate number of rows and columns
+    n_labels = len(unique_labels)
+    n_rows = math.ceil(n_labels / n_cols)
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(6*n_cols, 6*n_rows))
+    # Handle single row/column cases
+    if n_rows == 1 and n_cols == 1:
+        axs = np.array([[axs]])  
+    elif n_rows == 1:
+        axs = np.array([axs])    
+    elif n_cols == 1:
+        axs = np.array([ax for ax in axs])[:, None]  
+
+    # 5. Iterate over each label and visualize it on its respective subplot
+    for i, label_id in enumerate(unique_labels):
+        row = i // n_cols
+        col = i % n_cols
+        ax = axs[row, col]
+
+        # (a) Generate the mask for the current label
+        label_mask = (seg_map_resized == label_id)
+        if not np.any(label_mask):
+            # If no pixels for this label, skip it
+            ax.axis("off")
+            continue
+
+        # (b) Display the original image
+        ax.imshow(orig_image)
+
+        # (c) Overlay the current label region (semi-transparent)
+        ax.imshow(label_mask, cmap="jet", alpha=0.4)
+
+        # (d) Calculate the "center" of the label in the image (using bounding box center here)
+        ys, xs = np.where(label_mask)
+        min_x, max_x = np.min(xs), np.max(xs)
+        min_y, max_y = np.min(ys), np.max(ys)
+        cx = (min_x + max_x) // 2
+        cy = (min_y + max_y) // 2
+
+        # (e) Annotate the center with the label text
+        if 0 <= label_id < len(labelset):
+            label_name = labelset[label_id]
+        else:
+            label_name = f"Unknown_{label_id}"
+
+        ax.text(
+            cx, cy, 
+            f"{label_name} (ID={label_id})", 
+            color="white", fontsize=10, 
+            ha="center", va="center",
+            bbox=dict(facecolor="black", alpha=0.5, pad=2)
+        )
+
+        ax.axis("off")
+
+    # Hide any extra subplots if there are fewer labels than subplot cells
+    for j in range(n_labels, n_rows * n_cols):
+        row = j // n_cols
+        col = j % n_cols
+        axs[row, col].axis("off")
+
+    # Optional overall title
+    fig.suptitle("Segmentation Results (Each Label in a Separate Subplot)", fontsize=15, y=0.98)
+
+    plt.tight_layout()
+    plt.show()
+
 
 # ------------------------------------------------------------------
 # Main execution
@@ -217,5 +328,8 @@ if __name__ == "__main__":
     # 4. Merge bounding boxes for each label
     label_positions = get_merged_labels_from_segmentation(seg_map, orig_size)
 
+    labelset = get_labelset_from_dataset("bird_parts")
     # 5. Visualize results
-    visualize_results(IMAGE_PATH, seg_map, orig_size, label_positions)
+    # visualize_results(IMAGE_PATH, seg_map, orig_size, label_positions)
+    visualize_labels_in_subplots_with_center_text(IMAGE_PATH, seg_map, orig_size, labelset,n_cols=3)
+

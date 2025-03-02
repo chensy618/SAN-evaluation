@@ -6,12 +6,12 @@ import matplotlib.patches as mpatches
 from PIL import Image
 from torchvision import transforms
 
-# ==================== System Configuration ====================
+#  Configuration 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_PATH = "model/san_vit_b_16.pth"
 IMAGE_PATH = "D:\\Github\\SAN-evaluation\\data\\images\\195.Carolina_Wren\\Carolina_Wren_0011_186871.jpg"
 
-# ==================== Model Architecture ====================
+#  Model  
 from san.model.san import SAN
 from detectron2.config import get_cfg
 from san.config import add_san_config
@@ -29,7 +29,7 @@ def load_san_model(checkpoint_path):
     model.eval()
     return model, cfg
 
-# ==================== Data Processing Pipeline ====================
+#  Data Processing  
 def preprocess_image(image_path):
     """Image preprocessing pipeline"""
     transform = transforms.Compose([
@@ -40,7 +40,7 @@ def preprocess_image(image_path):
     ])
     return transform(Image.open(image_path).convert("RGB")).unsqueeze(0).to(DEVICE)
 
-# ==================== Attention Processing Core ====================
+#  Attention Processing  
 def process_attention_maps(attn_maps_tuple):
     """Process multi-head attention maps:
     1. Average across attention layers
@@ -58,7 +58,7 @@ def process_attention_maps(attn_maps_tuple):
     print("head_avg:",head_avg.shape)
     return head_avg.squeeze(0).cpu().numpy()  # [100, 400]
 
-# ==================== Coordinate Mapping System ====================
+#  Coordinate Mapping 
 class CoordinateMapper:
     def __init__(self, image_size=640, grid_size=20):
         self.patch_size = image_size // grid_size  # 32
