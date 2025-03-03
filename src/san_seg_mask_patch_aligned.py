@@ -64,7 +64,7 @@ def process_predictions(mask_preds, mask_cls_result):
     mask_cls_result: [100, 16] → Class predictions
 
     Returns:
-    patch_labels: [40, 40] → The predicted class for each `16×16` pixel region
+    patch_labels: [40, 40] → The predicted class for each `16x16` pixel region
     """
     mask_preds = torch.sigmoid(mask_preds).squeeze(0)  # [100, 40, 40]
     mask_cls = F.softmax(mask_cls_result, dim=1)       # [100, 16]
